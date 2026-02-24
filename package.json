@@ -1,0 +1,16 @@
+{
+  "name": "prism",
+  "version": "1.0.0",
+  "description": "Multi-model AI orchestration — Codex, Gemini, and more",
+  "author": "Owner",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Owner/prism.git"
+  },
+  "scripts": {
+    "test": "./scripts/test.sh",
+    "install:gemini-server": "cd plugins/prism/mcp-servers/gemini-server && npm install",
+    "install:all": "npm run install:gemini-server"
+  }
+}

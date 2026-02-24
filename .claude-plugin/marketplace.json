@@ -1,0 +1,13 @@
+{
+  "name": "Owner-prism",
+  "owner": { "name": "Owner" },
+  "metadata": { "description": "Multi-model AI orchestration — Codex, Gemini, and more" },
+  "plugins": [
+    {
+      "name": "prism",
+      "source": "./plugins/prism",
+      "description": "Orchestrate Codex, Gemini, and other LLMs as Claude Code sub-agents",
+      "version": "1.0.0"
+    }
+  ]
+}

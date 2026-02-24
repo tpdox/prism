@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "prism-codex": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/codex-server/index.js"]
+    },
+    "prism-gemini": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server/index.js"]
+    }
+  }
+}

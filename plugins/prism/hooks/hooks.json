@@ -1,0 +1,8 @@
+{
+  "hooks": [
+    {
+      "event": "PostInstall",
+      "command": "cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server && npm install --production"
+    }
+  ]
+}
