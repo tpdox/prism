@@ -35,6 +35,7 @@ cd ~/prism && ./install.sh
 | `gemini-researcher` | Gemini CLI | API docs, web research, large-context analysis |
 | `gemini-coder` | Gemini CLI | Multi-file generation, research-informed code |
 | `kimi-writer` | Kimi API | Polished writing, docs, READMEs, blog posts |
+| `debate` | All models | Multi-round debates between Codex, Gemini, and Kimi |
 | `router` | Any agent | Auto-routes to optimal model by task type |
 
 ## Usage
@@ -47,6 +48,8 @@ You: "Use the codex-coder agent to write a Redis cache wrapper"
 You: "Use the gemini-researcher agent to research rate limiting patterns"
 
 You: "Use the router to review my last commit"
+
+You: "Use the debate agent to debate: tabs vs spaces"
 ```
 
 ## MCP Tools

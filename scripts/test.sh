@@ -67,7 +67,7 @@ check_file "plugins/prism/mcp-servers/shared/output-parser.js"
 echo ""
 echo "3. Agent Definitions"
 
-for agent in codex-coder codex-reviewer gemini-coder gemini-researcher kimi-writer router; do
+for agent in codex-coder codex-reviewer gemini-coder gemini-researcher kimi-writer debate router; do
   AGENT_FILE="$PRISM_DIR/plugins/prism/agents/$agent.md"
   if [ -f "$AGENT_FILE" ]; then
     # Check for required frontmatter fields
