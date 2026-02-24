@@ -2,7 +2,7 @@
   "hooks": [
     {
       "event": "PostInstall",
-      "command": "cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server && npm install --production"
+      "command": "cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server && npm install --production && cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/kimi-server && npm install --production"
     }
   ]
 }

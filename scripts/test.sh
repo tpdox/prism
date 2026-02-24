@@ -67,7 +67,7 @@ check_file "plugins/prism/mcp-servers/shared/output-parser.js"
 echo ""
 echo "3. Agent Definitions"
 
-for agent in codex-coder codex-reviewer gemini-coder gemini-researcher router; do
+for agent in codex-coder codex-reviewer gemini-coder gemini-researcher kimi-writer router; do
   AGENT_FILE="$PRISM_DIR/plugins/prism/agents/$agent.md"
   if [ -f "$AGENT_FILE" ]; then
     # Check for required frontmatter fields
@@ -126,6 +126,7 @@ if node -e "
   if (!m.mcpServers) throw new Error('missing mcpServers');
   if (!m.mcpServers['prism-codex']) throw new Error('missing prism-codex');
   if (!m.mcpServers['prism-gemini']) throw new Error('missing prism-gemini');
+  if (!m.mcpServers['prism-kimi']) throw new Error('missing prism-kimi');
   process.exit(0);
 " 2>/dev/null; then
   pass ".mcp.json valid"
@@ -161,6 +162,14 @@ if [ -d "$GEMINI_SERVER_DIR/node_modules" ]; then
   pass "Gemini MCP server dependencies installed"
 else
   skip "Gemini MCP server dependencies (run: cd plugins/prism/mcp-servers/gemini-server && npm install)"
+fi
+
+# Test kimi server deps
+KIMI_SERVER_DIR="$PRISM_DIR/plugins/prism/mcp-servers/kimi-server"
+if [ -d "$KIMI_SERVER_DIR/node_modules" ]; then
+  pass "Kimi MCP server dependencies installed"
+else
+  skip "Kimi MCP server dependencies (run: cd plugins/prism/mcp-servers/kimi-server && npm install)"
 fi
 
 # ── Results ──

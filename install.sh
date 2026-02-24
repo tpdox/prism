@@ -97,18 +97,34 @@ else
   ok "GOOGLE_API_KEY configured"
 fi
 
-# ── Step 4: Install MCP server dependencies ──
+# ── Step 4: Check Kimi API key ──
 
 echo ""
-echo "Step 4/5: Installing dependencies..."
+echo "Step 4/7: Checking Kimi (Moonshot AI)..."
+
+if [ -z "${MOONSHOT_API_KEY:-}" ]; then
+  warn "No MOONSHOT_API_KEY found in environment"
+  echo "  Get one at: https://platform.moonshot.ai/"
+  echo "  Then: export MOONSHOT_API_KEY=your-key"
+else
+  ok "MOONSHOT_API_KEY configured"
+fi
+
+# ── Step 5: Install MCP server dependencies ──
+
+echo ""
+echo "Step 5/7: Installing dependencies..."
 
 cd "$PRISM_DIR/plugins/prism/mcp-servers/gemini-server"
 npm install --production --silent 2>/dev/null && ok "Gemini MCP server dependencies installed" || warn "Failed to install Gemini server deps"
 
-# ── Step 5: Configure Claude Desktop ──
+cd "$PRISM_DIR/plugins/prism/mcp-servers/kimi-server"
+npm install --production --silent 2>/dev/null && ok "Kimi MCP server dependencies installed" || warn "Failed to install Kimi server deps"
+
+# ── Step 6: Configure Claude Desktop ──
 
 echo ""
-echo "Step 5/5: Configuring Claude Desktop..."
+echo "Step 6/7: Configuring Claude Desktop..."
 
 CLAUDE_CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 CLAUDE_CONFIG_DIR="$(dirname "$CLAUDE_CONFIG")"
@@ -142,6 +158,10 @@ else
         command: 'node',
         args: ['$GEMINI_SERVER']
       };
+      config.mcpServers['prism-kimi'] = {
+        command: 'node',
+        args: ['$PRISM_DIR/plugins/prism/mcp-servers/kimi-server/index.js']
+      };
       fs.writeFileSync('$CLAUDE_CONFIG', JSON.stringify(config, null, 2));
     " && ok "Added Prism MCP servers to Claude Desktop config"
   else
@@ -157,6 +177,10 @@ else
           'prism-gemini': {
             command: 'node',
             args: ['$GEMINI_SERVER']
+          },
+          'prism-kimi': {
+            command: 'node',
+            args: ['$PRISM_DIR/plugins/prism/mcp-servers/kimi-server/index.js']
           }
         }
       };
@@ -175,6 +199,7 @@ echo ""
 echo "  MCP servers configured:"
 echo "    • prism-codex  → Codex CLI wrapper"
 echo "    • prism-gemini → Gemini CLI wrapper"
+echo "    • prism-kimi   → Kimi API wrapper"
 echo ""
 echo "  Usage in Claude Desktop:"
 echo "    Ask Claude to use the gemini_research or"

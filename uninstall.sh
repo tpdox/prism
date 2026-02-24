@@ -22,6 +22,7 @@ if [ -f "$CLAUDE_CONFIG" ]; then
     if (config.mcpServers) {
       delete config.mcpServers['prism-codex'];
       delete config.mcpServers['prism-gemini'];
+      delete config.mcpServers['prism-kimi'];
     }
     fs.writeFileSync('$CLAUDE_CONFIG', JSON.stringify(config, null, 2));
   " && echo "  ✓ Removed Prism MCP servers from Claude Desktop config"

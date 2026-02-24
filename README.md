@@ -1,6 +1,6 @@
 # Prism
 
-**Multi-model AI orchestration for Claude Code.** Split a single request into multiple model perspectives — like light through a prism. Delegate tasks to OpenAI Codex, Google Gemini, and any future LLM.
+**Multi-model AI orchestration for Claude Code.** Split a single request into multiple model perspectives — like light through a prism. Delegate tasks to OpenAI Codex, Google Gemini, Kimi, and any future LLM.
 
 ## Install
 
@@ -20,10 +20,11 @@ cd ~/prism && ./install.sh
 
 ### Prerequisites
 
-| CLI | Install | Auth |
-|-----|---------|------|
+| Provider | Install | Auth |
+|----------|---------|------|
 | Codex | `npm install -g @openai/codex` | `codex login` or set `OPENAI_API_KEY` |
 | Gemini | `npm install -g @google/gemini-cli` | Set `GOOGLE_API_KEY` ([get key](https://aistudio.google.com/apikey)) |
+| Kimi | No CLI needed (API only) | Set `MOONSHOT_API_KEY` ([get key](https://platform.moonshot.ai/)) |
 
 ## Agents
 
@@ -33,6 +34,7 @@ cd ~/prism && ./install.sh
 | `codex-reviewer` | Codex CLI | Independent code review, second opinions |
 | `gemini-researcher` | Gemini CLI | API docs, web research, large-context analysis |
 | `gemini-coder` | Gemini CLI | Multi-file generation, research-informed code |
+| `kimi-writer` | Kimi API | Polished writing, docs, READMEs, blog posts |
 | `router` | Any agent | Auto-routes to optimal model by task type |
 
 ## Usage
@@ -56,6 +58,9 @@ Available in both Claude Code and Claude Desktop:
 | `gemini_generate` | Text/code generation via Gemini |
 | `gemini_analyze` | Large-context analysis (1M tokens) |
 | `gemini_research` | Web-grounded research with Google Search |
+| `kimi_write` | Polished prose and documentation via Kimi |
+| `kimi_generate` | General text/code generation via Kimi |
+| `kimi_analyze` | Large-context analysis (256K) via Kimi |
 | Codex tools | Exposed via `codex mcp-server` (built-in) |
 
 ## Adding Providers
