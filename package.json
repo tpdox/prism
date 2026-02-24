@@ -2,11 +2,11 @@
   "name": "prism",
   "version": "1.0.0",
   "description": "Multi-model AI orchestration — Codex, Gemini, and more",
-  "author": "Owner",
+  "author": "tpdox",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Owner/prism.git"
+    "url": "https://github.com/tpdox/prism.git"
   },
   "scripts": {
     "test": "./scripts/test.sh",

@@ -7,14 +7,14 @@
 **Claude Code (recommended):**
 
 ```
-claude plugin marketplace add Owner/prism
-claude plugin install prism@Owner-prism --scope user
+claude plugin marketplace add tpdox/prism
+claude plugin install prism@tpdox-prism --scope user
 ```
 
 **Claude Desktop (MCP tools only):**
 
 ```bash
-git clone https://github.com/Owner/prism.git ~/prism
+git clone https://github.com/tpdox/prism.git ~/prism
 cd ~/prism && ./install.sh
 ```
 
@@ -75,10 +75,10 @@ Available in both Claude Code and Claude Desktop:
 
 ```bash
 # Update (Claude Code)
-claude plugin update prism@Owner-prism
+claude plugin update prism@tpdox-prism
 
 # Uninstall (Claude Code)
-claude plugin uninstall prism@Owner-prism
+claude plugin uninstall prism@tpdox-prism
 
 # Uninstall (manual)
 ./uninstall.sh

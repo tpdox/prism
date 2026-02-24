@@ -1,6 +1,6 @@
 {
-  "name": "Owner-prism",
-  "owner": { "name": "Owner" },
+  "name": "tpdox-prism",
+  "owner": { "name": "tpdox" },
   "metadata": { "description": "Multi-model AI orchestration — Codex, Gemini, and more" },
   "plugins": [
     {

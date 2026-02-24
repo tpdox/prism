@@ -2,8 +2,8 @@
   "name": "prism",
   "description": "Multi-model AI orchestration — delegate to Codex, Gemini, and more",
   "version": "1.0.0",
-  "author": { "name": "Owner" },
-  "repository": "https://github.com/Owner/prism",
+  "author": { "name": "tpdox" },
+  "repository": "https://github.com/tpdox/prism",
   "license": "MIT",
   "agents": "./agents/",
   "mcpServers": "./.mcp.json"

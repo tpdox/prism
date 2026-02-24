@@ -32,7 +32,7 @@ fi
 
 echo ""
 echo "  For Claude Code plugin:"
-echo "    claude plugin uninstall prism@Owner-prism"
+echo "    claude plugin uninstall prism@tpdox-prism"
 echo ""
 echo "  Done. Restart Claude Desktop to complete removal."
 echo ""
