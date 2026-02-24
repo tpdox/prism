@@ -12,6 +12,9 @@
  * Requires MOONSHOT_API_KEY environment variable.
  */
 
+import { bootstrap } from "../shared/bootstrap.js";
+bootstrap(import.meta.url);
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";

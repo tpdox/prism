@@ -9,6 +9,9 @@
  *   - gemini_research: Web-grounded research via Gemini with Google Search
  */
 
+import { bootstrap } from "../shared/bootstrap.js";
+bootstrap(import.meta.url);
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
