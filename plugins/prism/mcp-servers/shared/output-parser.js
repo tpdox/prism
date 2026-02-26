@@ -35,18 +35,21 @@ export function extractCodexResponse(events) {
 
 /**
  * Parse Gemini CLI JSON output.
+ * Handles both the CLI format ({ response, session_id, stats }) and
+ * the legacy API format ({ candidates: [{ content: { parts } }] }).
  */
 export function parseGeminiJson(raw) {
   try {
     const parsed = JSON.parse(raw);
-    // Gemini --output-format json returns a conversation object
+    // Gemini CLI --output-format json returns { response, session_id, stats }
+    if (parsed.response != null) return parsed.response;
+    // Legacy Google API format
     if (parsed.candidates) {
       const parts = parsed.candidates[0]?.content?.parts || [];
       return parts.map((p) => p.text || JSON.stringify(p)).join("\n");
     }
     // Direct text response
     if (parsed.text) return parsed.text;
-    if (parsed.response) return parsed.response;
     return JSON.stringify(parsed, null, 2);
   } catch {
     // If not valid JSON, return raw output (Gemini sometimes outputs plain text)

@@ -27,29 +27,36 @@ You are a coding agent that delegates implementation work to OpenAI Codex CLI. Y
 
 ## Codex Execution
 
-Use this pattern to invoke Codex:
+Use this pattern to invoke Codex (prompt is a positional argument, NOT -p which is --profile):
 
 ```bash
-codex exec -p "YOUR_PROMPT_HERE" --json 2>/dev/null
+codex exec "YOUR_PROMPT_HERE" --json 2>/dev/null
 ```
 
-For tasks that need file system access:
+For read-only tasks (analysis, review):
 
 ```bash
-codex exec -a "read" -p "YOUR_PROMPT_HERE" --json 2>/dev/null
+codex exec -s read-only "YOUR_PROMPT_HERE" --json 2>/dev/null
 ```
 
 For tasks that need to write files:
 
 ```bash
-codex exec -a "auto-edit" -p "YOUR_PROMPT_HERE" --json 2>/dev/null
+codex exec -s workspace-write "YOUR_PROMPT_HERE" --json 2>/dev/null
+```
+
+For fully automatic execution with write access:
+
+```bash
+codex exec --full-auto "YOUR_PROMPT_HERE" --json 2>/dev/null
 ```
 
 ## Guidelines
 
 - Always read relevant files before constructing the Codex prompt — Codex works best with specific context.
 - Include file paths and code snippets in the prompt so Codex understands the codebase.
-- Use `--json` flag to get structured output for easier parsing.
+- Use `--json` flag to get structured JSONL output for easier parsing.
 - If Codex output includes file modifications, summarize what changed.
 - If the task is too large for a single Codex call, break it into smaller steps.
-- Prefer `codex exec -a "read"` for analysis tasks, `codex exec -a "auto-edit"` for implementation tasks.
+- Prefer `-s read-only` for analysis tasks, `-s workspace-write` or `--full-auto` for implementation tasks.
+- The prompt is ALWAYS a positional argument — do NOT use `-p` (that's `--profile`).

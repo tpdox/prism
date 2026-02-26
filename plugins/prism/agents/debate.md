@@ -44,9 +44,9 @@ You (the moderator) deliver:
 
 ### Calling Codex
 ```bash
-codex exec -a "read" -p "PROMPT_HERE" --json 2>/dev/null
+codex exec -s read-only "PROMPT_HERE" --json 2>/dev/null
 ```
-Extract the response text from the JSON output.
+Extract the response text from the JSONL output. Look for `item.completed` events with the agent's message text.
 
 ### Calling Gemini
 Use `gemini_generate` with system prompt for personality.

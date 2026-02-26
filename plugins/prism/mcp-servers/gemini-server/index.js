@@ -12,11 +12,12 @@
 import { bootstrap } from "../shared/bootstrap.js";
 bootstrap(import.meta.url);
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import { runCli } from "../shared/cli-runner.js";
-import { parseGeminiJson } from "../shared/output-parser.js";
+// Dynamic imports — must come AFTER bootstrap so node_modules exist
+const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+const { z } = await import("zod");
+const { runCli } = await import("../shared/cli-runner.js");
+const { parseGeminiJson } = await import("../shared/output-parser.js");
 
 const GEMINI_BIN = process.env.GEMINI_PATH || "gemini";
 
@@ -26,8 +27,15 @@ async function callGemini(prompt, { sandbox = true, model } = {}) {
   if (model) args.push("--model", model);
   args.push("-p", prompt);
 
+  // Gemini CLI expects GEMINI_API_KEY; bridge from GOOGLE_API_KEY if needed
+  const env = {};
+  if (!process.env.GEMINI_API_KEY && process.env.GOOGLE_API_KEY) {
+    env.GEMINI_API_KEY = process.env.GOOGLE_API_KEY;
+  }
+
   const { stdout, stderr, code } = await runCli(GEMINI_BIN, args, {
     timeout: 180_000, // 3 min for research tasks
+    env,
   });
 
   if (code !== 0) {

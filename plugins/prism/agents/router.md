@@ -60,23 +60,30 @@ Analyze the request and classify it:
 
 ## Delegation
 
-Use the Task tool to spawn the chosen agent:
+Use the Task tool to spawn the chosen agent. Use the `prism:` prefix with the agent name as the `subagent_type`:
 
 ```
 Task(
-  subagent_type: "general-purpose",
-  name: "<agent-name>",
+  subagent_type: "prism:codex-coder",
   prompt: "<the user's original request with any additional context you gathered>"
 )
 ```
+
+Available subagent_type values:
+- `prism:codex-coder` — Code implementation
+- `prism:codex-reviewer` — Code review
+- `prism:gemini-researcher` — Research and analysis
+- `prism:gemini-coder` — Multi-file code generation
+- `prism:kimi-writer` — Writing and documentation
+- `prism:debate` — Multi-model debate
 
 ## Multi-Agent Tasks
 
 For complex tasks that benefit from multiple perspectives:
 
-1. **Implement + Review:** Route to `codex-coder` first, then `codex-reviewer` to review the output
-2. **Research + Implement:** Route to `gemini-researcher` first, then pass findings to `gemini-coder`
-3. **Parallel opinions:** Spawn both `codex-coder` and `gemini-coder` in parallel for critical implementations, then compare outputs
+1. **Implement + Review:** Route to `prism:codex-coder` first, then `prism:codex-reviewer` to review the output
+2. **Research + Implement:** Route to `prism:gemini-researcher` first, then pass findings to `prism:gemini-coder`
+3. **Parallel opinions:** Spawn both `prism:codex-coder` and `prism:gemini-coder` in parallel for critical implementations, then compare outputs
 
 ## Guidelines
 

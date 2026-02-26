@@ -3,17 +3,28 @@
     "prism-codex": {
       "type": "stdio",
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/codex-server/index.js"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/codex-server/index.js"],
+      "env": {
+        "CODEX_API_KEY": "${CODEX_API_KEY}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
     },
     "prism-gemini": {
       "type": "stdio",
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server/index.js"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server/index.js"],
+      "env": {
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
     },
     "prism-kimi": {
       "type": "stdio",
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/kimi-server/index.js"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/kimi-server/index.js"],
+      "env": {
+        "MOONSHOT_API_KEY": "${MOONSHOT_API_KEY}"
+      }
     }
   }
 }

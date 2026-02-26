@@ -15,9 +15,10 @@
 import { bootstrap } from "../shared/bootstrap.js";
 bootstrap(import.meta.url);
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+// Dynamic imports — must come AFTER bootstrap so node_modules exist
+const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+const { z } = await import("zod");
 
 const API_BASE = process.env.MOONSHOT_API_BASE || "https://api.moonshot.ai/v1";
 const API_KEY = process.env.MOONSHOT_API_KEY;
