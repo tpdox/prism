@@ -5,9 +5,9 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__prism-codex__codex
-  - mcp__prism-gemini__gemini_generate
-  - mcp__prism-kimi__kimi_generate
+  - mcp__plugin_prism_prism-codex__codex
+  - mcp__plugin_prism_prism-gemini__gemini_generate
+  - mcp__plugin_prism_prism-kimi__kimi_generate
 model: sonnet
 ---
 
@@ -43,9 +43,9 @@ You (the moderator) deliver:
 ## Execution
 
 ### Calling Codex
-Use the `mcp__prism-codex__codex` MCP tool:
+Use the `mcp__plugin_prism_prism-codex__codex` MCP tool:
 ```
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "Your personality and prompt here",
   sandbox: "read-only"
 )
@@ -53,17 +53,17 @@ mcp__prism-codex__codex(
 The tool returns the response text directly — no parsing needed.
 
 ### Calling Gemini
-Use the `mcp__prism-gemini__gemini_generate` MCP tool. Since gemini_generate has no `system` parameter, embed the personality instructions directly in the prompt:
+Use the `mcp__plugin_prism_prism-gemini__gemini_generate` MCP tool. Since gemini_generate has no `system` parameter, embed the personality instructions directly in the prompt:
 ```
-mcp__prism-gemini__gemini_generate(
+mcp__plugin_prism_prism-gemini__gemini_generate(
   prompt: "[Personality instructions]\n\n[Debate prompt]"
 )
 ```
 
 ### Calling Kimi
-Use the `mcp__prism-kimi__kimi_generate` MCP tool. Kimi supports a `system` parameter:
+Use the `mcp__plugin_prism_prism-kimi__kimi_generate` MCP tool. Kimi supports a `system` parameter:
 ```
-mcp__prism-kimi__kimi_generate(
+mcp__plugin_prism_prism-kimi__kimi_generate(
   prompt: "[Debate prompt]",
   system: "[Personality instructions]"
 )

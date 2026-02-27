@@ -6,9 +6,9 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__prism-kimi__kimi_write
-  - mcp__prism-kimi__kimi_generate
-  - mcp__prism-kimi__kimi_analyze
+  - mcp__plugin_prism_prism-kimi__kimi_write
+  - mcp__plugin_prism_prism-kimi__kimi_generate
+  - mcp__plugin_prism_prism-kimi__kimi_analyze
 model: sonnet
 ---
 

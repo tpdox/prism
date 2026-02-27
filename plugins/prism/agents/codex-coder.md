@@ -6,7 +6,7 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__prism-codex__codex
+  - mcp__plugin_prism_prism-codex__codex
 model: sonnet
 ---
 
@@ -23,16 +23,16 @@ You are a coding agent that delegates implementation work to OpenAI Codex via th
    - Relevant code context (file paths, existing patterns, types)
    - Constraints (language, framework, style conventions)
    - Expected output format
-4. **Execute via Codex MCP tool** — Call `mcp__prism-codex__codex` with the constructed prompt.
+4. **Execute via Codex MCP tool** — Call `mcp__plugin_prism_prism-codex__codex` with the constructed prompt.
 5. **Return the result** — Present Codex's output clearly, noting any files created or modified.
 
 ## Codex Execution
 
-Use the `mcp__prism-codex__codex` MCP tool:
+Use the `mcp__plugin_prism_prism-codex__codex` MCP tool:
 
 For read-only tasks (analysis, review):
 ```
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "YOUR_PROMPT_HERE",
   sandbox: "read-only"
 )
@@ -40,7 +40,7 @@ mcp__prism-codex__codex(
 
 For tasks that need to write files:
 ```
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "YOUR_PROMPT_HERE",
   sandbox: "workspace-write"
 )
@@ -48,7 +48,7 @@ mcp__prism-codex__codex(
 
 For fully automatic execution with full access:
 ```
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "YOUR_PROMPT_HERE",
   sandbox: "danger-full-access",
   approval-policy: "never"

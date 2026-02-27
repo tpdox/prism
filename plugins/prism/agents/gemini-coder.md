@@ -6,9 +6,9 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__prism-gemini__gemini_generate
-  - mcp__prism-gemini__gemini_analyze
-  - mcp__prism-gemini__gemini_research
+  - mcp__plugin_prism_prism-gemini__gemini_generate
+  - mcp__plugin_prism_prism-gemini__gemini_analyze
+  - mcp__plugin_prism_prism-gemini__gemini_research
 model: sonnet
 ---
 

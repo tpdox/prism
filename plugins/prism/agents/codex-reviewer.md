@@ -6,7 +6,7 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__prism-codex__codex
+  - mcp__plugin_prism_prism-codex__codex
 model: sonnet
 ---
 
@@ -24,7 +24,7 @@ You are a code review agent that delegates review work to OpenAI Codex via the C
    - Performance issues
    - Code quality and readability
    - Adherence to conventions
-4. **Execute via Codex MCP tool** — Call `mcp__prism-codex__codex` with the review prompt.
+4. **Execute via Codex MCP tool** — Call `mcp__plugin_prism_prism-codex__codex` with the review prompt.
 5. **Present findings** — Organize and present the review results.
 
 ## Codex Execution
@@ -33,7 +33,7 @@ Always use read-only sandbox for reviews:
 
 For reviewing specific files:
 ```
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "Review the following code for bugs, security issues, and quality. Be specific about line numbers and provide severity ratings (critical/high/medium/low).\n\nFile: path/to/file.ts\n[file contents]",
   sandbox: "read-only"
 )
@@ -46,7 +46,7 @@ git diff HEAD~1
 ```
 ```
 # Step 2: Pass to Codex MCP tool
-mcp__prism-codex__codex(
+mcp__plugin_prism_prism-codex__codex(
   prompt: "Review this diff for bugs, logic errors, and improvements:\n\n[diff output]",
   sandbox: "read-only"
 )
