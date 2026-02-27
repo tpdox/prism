@@ -14,8 +14,7 @@
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini-server/index.js"],
       "env": {
-        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}",
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}"
       }
     },
     "prism-kimi": {

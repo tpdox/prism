@@ -3,7 +3,8 @@
 /**
  * Prism Gemini MCP Server
  *
- * Custom MCP server that wraps Gemini CLI, exposing three tools:
+ * Direct API integration with Google Gemini (no CLI dependency).
+ * Exposes three tools:
  *   - gemini_generate: General-purpose text generation
  *   - gemini_analyze:  Analyze files/code with Gemini's large context window
  *   - gemini_research: Web-grounded research via Gemini with Google Search
@@ -12,38 +13,49 @@
 import { bootstrap } from "../shared/bootstrap.js";
 bootstrap(import.meta.url);
 
-// Dynamic imports — must come AFTER bootstrap so node_modules exist
 const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
 const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
 const { z } = await import("zod");
-const { runCli } = await import("../shared/cli-runner.js");
-const { parseGeminiJson } = await import("../shared/output-parser.js");
 
-const GEMINI_BIN = process.env.GEMINI_PATH || "gemini";
+const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-async function callGemini(prompt, { sandbox = true, model } = {}) {
-  const args = ["--output-format", "json"];
-  if (sandbox) args.push("--sandbox");
-  if (model) args.push("--model", model);
-  args.push("-p", prompt);
-
-  // Gemini CLI expects GEMINI_API_KEY; bridge from GOOGLE_API_KEY if needed
-  const env = {};
-  if (!process.env.GEMINI_API_KEY && process.env.GOOGLE_API_KEY) {
-    env.GEMINI_API_KEY = process.env.GOOGLE_API_KEY;
+async function callGemini(prompt, { model = DEFAULT_MODEL, systemInstruction, tools } = {}) {
+  if (!API_KEY) {
+    throw new Error(
+      "Neither GOOGLE_API_KEY nor GEMINI_API_KEY is set. Get one at https://aistudio.google.com/apikey"
+    );
   }
 
-  const { stdout, stderr, code } = await runCli(GEMINI_BIN, args, {
-    timeout: 180_000, // 3 min for research tasks
-    env,
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+  };
+  if (systemInstruction) {
+    body.systemInstruction = { parts: [{ text: systemInstruction }] };
+  }
+  if (tools) {
+    body.tools = tools;
+  }
+
+  const url = `${API_BASE}/models/${model}:generateContent?key=${API_KEY}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 
-  if (code !== 0) {
-    const errMsg = stderr.trim() || `Gemini exited with code ${code}`;
-    throw new Error(errMsg);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error (${res.status}): ${err}`);
   }
 
-  return parseGeminiJson(stdout);
+  const data = await res.json();
+  const parts = data.candidates?.[0]?.content?.parts;
+  if (!parts?.length) {
+    throw new Error(`Gemini returned no content: ${JSON.stringify(data)}`);
+  }
+  return parts.map((p) => p.text ?? "").join("");
 }
 
 const server = new McpServer({
@@ -103,8 +115,12 @@ server.tool(
         ? "Provide a comprehensive, detailed analysis with multiple sources and perspectives."
         : "Provide a concise, focused answer.";
 
-      const prompt = `Research the following topic. Use Google Search to find current, accurate information. ${depthInstruction}\n\nTopic: ${query}`;
-      const result = await callGemini(prompt, { sandbox: false, model });
+      const prompt = `Research the following topic. ${depthInstruction}\n\nTopic: ${query}`;
+      // Enable Google Search grounding for research queries
+      const result = await callGemini(prompt, {
+        model,
+        tools: [{ googleSearch: {} }],
+      });
       return { content: [{ type: "text", text: result }] };
     } catch (err) {
       return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
