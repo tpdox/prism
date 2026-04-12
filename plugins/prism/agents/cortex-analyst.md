@@ -7,6 +7,7 @@ tools:
   - Glob
   - Grep
   - mcp__plugin_prism_prism-cortex__cortex_analyst
+  - mcp__plugin_prism_prism-cortex__cortex_feedback
   - mcp__plugin_prism_prism-cortex__cortex_complete
   - mcp__plugin_prism_prism-cortex__cortex_search
 model: sonnet
@@ -42,6 +43,13 @@ Owner.com has 6 semantic models covering the full business:
 Use for all data questions. Converts natural language to SQL via semantic models.
 - Specify `domain` when you know which data area the question targets
 - Omit `domain` to let the auto-router choose based on keywords
+
+### `cortex_feedback` — Response Feedback
+Use after any `cortex_analyst` call to improve future query accuracy:
+- Use the `request_id` from the cortex_analyst response
+- Set `positive: true` if the SQL/answer was correct
+- Set `positive: false` with `feedback_message` explaining what was wrong
+- After cortex_analyst calls, note the Request ID. If the user says the SQL was wrong or right, use cortex_feedback.
 
 ### `cortex_complete` — LLM Completions
 Use when you need to:

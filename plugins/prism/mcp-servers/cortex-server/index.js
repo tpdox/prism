@@ -4,8 +4,9 @@
  * Prism Cortex MCP Server
  *
  * Integrates with Snowflake Cortex APIs via key-pair JWT authentication.
- * Exposes three tools:
+ * Exposes four tools:
  *   - cortex_analyst:  Natural language → SQL via semantic models
+ *   - cortex_feedback: Submit feedback on Cortex Analyst responses
  *   - cortex_complete: LLM completions using Snowflake-hosted models
  *   - cortex_search:   Query Cortex Search services
  *
@@ -92,7 +93,14 @@ function getJWT() {
   const now = Math.floor(Date.now() / 1000);
   if (jwtCache && jwtCache.exp - now > 300) return jwtCache.token;
 
-  const privateKeyPem = readFileSync(PRIVATE_KEY_PATH, "utf8");
+  let privateKeyPem;
+  try {
+    privateKeyPem = readFileSync(PRIVATE_KEY_PATH, "utf8");
+  } catch (err) {
+    throw new Error(
+      `Failed to read private key at ${PRIVATE_KEY_PATH}: ${err.message}`
+    );
+  }
   const privateKey = createPrivateKey(privateKeyPem);
   const publicKey = createPublicKey(privateKey);
 
@@ -129,6 +137,10 @@ function getJWT() {
 
 // --- API Helpers ---
 
+/**
+ * POST to a Snowflake REST endpoint with JWT auth.
+ * Returns { data, requestId } where requestId is extracted from headers or body.
+ */
 async function snowflakePost(path, body) {
   if (!BASE_URL) throw new Error("SNOWFLAKE_ACCOUNT not set.");
 
@@ -152,22 +164,40 @@ async function snowflakePost(path, body) {
     throw new Error(`Snowflake API error (${res.status}): ${err}`);
   }
 
+  // Extract request_id from response headers
+  const headerRequestId = res.headers.get("x-snowflake-request-id")
+    || res.headers.get("x-request-id")
+    || null;
+
+  // Handle 204 No Content (e.g., feedback endpoint)
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return { data: null, requestId: headerRequestId };
+  }
+
   // Handle SSE streaming responses
   const contentType = res.headers.get("content-type") || "";
   if (contentType.includes("text/event-stream")) {
     const text = await res.text();
     const chunks = [];
+    let sseRequestId = null;
     for (const line of text.split("\n")) {
       if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        if (data === "[DONE]") break;
-        try { chunks.push(JSON.parse(data)); } catch { /* skip */ }
+        const raw = line.slice(6);
+        if (raw === "[DONE]") break;
+        try {
+          const parsed = JSON.parse(raw);
+          chunks.push(parsed);
+          // Capture last request_id seen in SSE chunks
+          if (parsed.request_id) sseRequestId = parsed.request_id;
+        } catch { /* skip malformed chunks */ }
       }
     }
-    return chunks;
+    return { data: chunks, requestId: sseRequestId || headerRequestId };
   }
 
-  return res.json();
+  const json = await res.json();
+  const bodyRequestId = json.request_id || null;
+  return { data: json, requestId: bodyRequestId || headerRequestId };
 }
 
 function routeDomain(question) {
@@ -190,7 +220,7 @@ function routeDomain(question) {
 
 // --- MCP Server ---
 
-const server = new McpServer({ name: "prism-cortex", version: "1.0.0" });
+const server = new McpServer({ name: "prism-cortex", version: "1.1.0" });
 
 // Tool 1: Cortex Analyst — Natural language → SQL via semantic models
 server.tool(
@@ -225,7 +255,7 @@ server.tool(
         body.semantic_view = semanticModel;
       }
 
-      const data = await snowflakePost("/api/v2/cortex/analyst/message", body);
+      const { data, requestId } = await snowflakePost("/api/v2/cortex/analyst/message", body);
 
       // Extract text and SQL from response (handles both SSE array and JSON)
       let textAnswer = "";
@@ -253,9 +283,14 @@ server.tool(
       const output = [
         `**Domain:** ${resolvedDomain}`,
         `**Semantic Model:** ${SEMANTIC_MODELS[resolvedDomain] || semanticModel}`,
+      ];
+      if (requestId) {
+        output.push(`**Request ID:** ${requestId}`);
+      }
+      output.push(
         "",
         textAnswer ? `**Answer:** ${textAnswer}` : "(No text response)",
-      ];
+      );
       if (sqlQuery) {
         output.push("", "**Generated SQL:**", "", "```sql", sqlQuery, "```");
       }
@@ -270,7 +305,51 @@ server.tool(
   }
 );
 
-// Tool 2: Cortex Complete — LLM completions via Snowflake-hosted models
+// Tool 2: Cortex Feedback — Submit feedback on Cortex Analyst responses
+server.tool(
+  "cortex_feedback",
+  "Submit feedback on a Cortex Analyst response to improve future query quality. " +
+    "Requires the request_id from a prior cortex_analyst call.",
+  {
+    request_id: z.string().describe(
+      "The request_id from a prior cortex_analyst response"
+    ),
+    positive: z.boolean().describe(
+      "true for positive feedback (thumbs up), false for negative (thumbs down)"
+    ),
+    feedback_message: z.string().optional().describe(
+      "Free-text explanation of the feedback (e.g., 'The SQL joined the wrong table')"
+    ),
+  },
+  async ({ request_id, positive, feedback_message }) => {
+    try {
+      const body = {
+        request_id,
+        positive,
+      };
+      if (feedback_message) body.feedback_message = feedback_message;
+
+      await snowflakePost("/api/v2/cortex/analyst/feedback", body);
+
+      const status = positive ? "positive" : "negative";
+      return {
+        content: [{
+          type: "text",
+          text: `Feedback submitted (${status}) for request ${request_id}.${
+            feedback_message ? `\nMessage: ${feedback_message}` : ""
+          }`,
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error submitting feedback: ${err.message}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Tool 3: Cortex Complete — LLM completions via Snowflake-hosted models
 server.tool(
   "cortex_complete",
   "Run LLM completions through Snowflake-hosted models (Claude, Llama, Mistral, etc.). " +
@@ -294,7 +373,7 @@ server.tool(
       if (temperature !== undefined) body.temperature = temperature;
       if (max_tokens !== undefined) body.max_tokens = max_tokens;
 
-      const data = await snowflakePost("/api/v2/cortex/inference:complete", body);
+      const { data } = await snowflakePost("/api/v2/cortex/inference:complete", body);
 
       let text = "";
       if (Array.isArray(data)) {
@@ -314,7 +393,7 @@ server.tool(
   }
 );
 
-// Tool 3: Cortex Search — Hybrid semantic + keyword search
+// Tool 4: Cortex Search — Hybrid semantic + keyword search
 server.tool(
   "cortex_search",
   "Search unstructured text data using Snowflake Cortex Search. " +
@@ -336,7 +415,7 @@ server.tool(
       const [db, schema, service] = parts;
       const path = `/api/v2/databases/${db}/schemas/${schema}/cortex-search-services/${service}:query`;
 
-      const data = await snowflakePost(path, {
+      const { data } = await snowflakePost(path, {
         query,
         columns: columns || [],
         limit: limit || 10,
