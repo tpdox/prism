@@ -5,12 +5,13 @@
  *
  * Integrates with Snowflake Cortex APIs via key-pair JWT authentication.
  * Exposes four tools:
- *   - cortex_analyst:  Natural language → SQL via semantic models
+ *   - cortex_analyst:  Natural language → SQL via semantic models (generates + executes)
  *   - cortex_feedback: Submit feedback on Cortex Analyst responses
  *   - cortex_complete: LLM completions using Snowflake-hosted models
  *   - cortex_search:   Query Cortex Search services
  *
  * Requires SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY_PATH.
+ * Optional: SNOWFLAKE_WAREHOUSE (needed for SQL execution in cortex_analyst).
  */
 
 import { bootstrap } from "../shared/bootstrap.js";
@@ -36,10 +37,15 @@ const USER = process.env.SNOWFLAKE_USER;
 const PRIVATE_KEY_PATH = process.env.SNOWFLAKE_PRIVATE_KEY_PATH;
 const ROLE = process.env.SNOWFLAKE_ROLE;
 const DATABASE = process.env.SNOWFLAKE_DATABASE || "DBT_ANALYTICS_PROD";
+const WAREHOUSE = process.env.SNOWFLAKE_WAREHOUSE;
 const SCHEMA_PREFIX = process.env.SNOWFLAKE_SCHEMA_PREFIX || "ANALYTICS";
 const BASE_URL = ACCOUNT
   ? `https://${ACCOUNT}.snowflakecomputing.com`
   : null;
+
+// Result formatting thresholds
+const MAX_DISPLAY_ROWS = 20;
+const MAX_DISPLAY_COLS = 8;
 
 // Owner.com semantic model mapping (6 domains from dbt-cloud Cortex Agent config)
 const SEMANTIC_MODELS = {
@@ -200,6 +206,150 @@ async function snowflakePost(path, body) {
   return { data: json, requestId: bodyRequestId || headerRequestId };
 }
 
+/**
+ * GET from a Snowflake REST endpoint with JWT auth.
+ */
+async function snowflakeGet(path) {
+  if (!BASE_URL) throw new Error("SNOWFLAKE_ACCOUNT not set.");
+
+  const token = getJWT();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      "X-Snowflake-Authorization-Token-Type": "KEYPAIR_JWT",
+      ...(ROLE ? { "X-Snowflake-Role": ROLE } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Snowflake API error (${res.status}): ${err}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Execute SQL via Snowflake SQL REST API.
+ * Submits the statement, polls for completion if async, returns { columns, rows, totalRows }.
+ */
+async function executeSQL(sql) {
+  if (!WAREHOUSE) {
+    throw new Error("SNOWFLAKE_WAREHOUSE not set — cannot execute SQL.");
+  }
+
+  const submitBody = {
+    statement: sql,
+    database: DATABASE,
+    warehouse: WAREHOUSE,
+    timeout: 60,
+  };
+  if (ROLE) submitBody.role = ROLE;
+
+  const { data } = await snowflakePost("/api/v2/statements", submitBody);
+
+  // Poll if the statement is still running (status 202 / "running")
+  let result = data;
+  const handle = result.statementHandle;
+  if (handle && result.statementStatusUrl) {
+    const maxAttempts = 30;
+    for (let i = 0; i < maxAttempts; i++) {
+      if (result.status === "failed") {
+        throw new Error(`SQL execution failed: ${result.message || "unknown error"}`);
+      }
+      if (result.data) break; // results are ready
+      await new Promise((r) => setTimeout(r, 1000));
+      result = await snowflakeGet(`/api/v2/statements/${handle}`);
+    }
+  }
+
+  if (!result.data) {
+    throw new Error("SQL execution timed out or returned no data.");
+  }
+
+  const columns = (result.resultSetMetaData?.rowType || []).map((col) => col.name);
+  const rows = result.data || [];
+  const totalRows = result.resultSetMetaData?.numRows ?? rows.length;
+
+  return { columns, rows, totalRows };
+}
+
+/**
+ * Format SQL results based on shape:
+ * - Scalar (1x1): inline value
+ * - Single row: key-value list
+ * - Small table: markdown table
+ * - Wide/large: truncated markdown table with notes
+ */
+function formatResults({ columns, rows, totalRows }) {
+  if (rows.length === 0) {
+    return "*Query returned no results.*";
+  }
+
+  const numCols = columns.length;
+  const numRows = rows.length;
+
+  // Scalar: 1 row, 1 column
+  if (numRows === 1 && numCols === 1) {
+    return `**Result:** ${formatValue(rows[0][0])}`;
+  }
+
+  // Single row, multiple columns: key-value list
+  if (numRows === 1) {
+    const lines = ["**Results (1 row):**"];
+    const displayCols = Math.min(numCols, MAX_DISPLAY_COLS);
+    for (let c = 0; c < displayCols; c++) {
+      lines.push(`- **${columns[c]}:** ${formatValue(rows[0][c])}`);
+    }
+    if (numCols > MAX_DISPLAY_COLS) {
+      lines.push(`- *...and ${numCols - MAX_DISPLAY_COLS} more columns*`);
+    }
+    return lines.join("\n");
+  }
+
+  // Table format
+  const displayCols = Math.min(numCols, MAX_DISPLAY_COLS);
+  const displayRows = Math.min(numRows, MAX_DISPLAY_ROWS);
+  const displayColumns = columns.slice(0, displayCols);
+
+  // Header
+  const lines = [
+    `| ${displayColumns.join(" | ")} |`,
+    `| ${displayColumns.map(() => "---").join(" | ")} |`,
+  ];
+
+  // Rows
+  for (let r = 0; r < displayRows; r++) {
+    const cells = [];
+    for (let c = 0; c < displayCols; c++) {
+      cells.push(formatValue(rows[r][c]));
+    }
+    lines.push(`| ${cells.join(" | ")} |`);
+  }
+
+  // Truncation notes
+  const notes = [];
+  if (totalRows > MAX_DISPLAY_ROWS) {
+    notes.push(`Showing ${MAX_DISPLAY_ROWS} of ${totalRows} rows`);
+  }
+  if (numCols > MAX_DISPLAY_COLS) {
+    notes.push(`Showing ${MAX_DISPLAY_COLS} of ${numCols} columns`);
+  }
+  if (notes.length) {
+    lines.push("", `*${notes.join(". ")}.*`);
+  }
+
+  return lines.join("\n");
+}
+
+function formatValue(val) {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "string" && val.length > 100) return val.slice(0, 97) + "...";
+  return String(val);
+}
+
 function routeDomain(question) {
   const q = question.toLowerCase();
   let bestDomain = "billing";
@@ -220,14 +370,14 @@ function routeDomain(question) {
 
 // --- MCP Server ---
 
-const server = new McpServer({ name: "prism-cortex", version: "1.1.0" });
+const server = new McpServer({ name: "prism-cortex", version: "1.2.0" });
 
 // Tool 1: Cortex Analyst — Natural language → SQL via semantic models
 server.tool(
   "cortex_analyst",
   "Query Owner.com data using natural language via Snowflake Cortex Analyst. " +
-    "Converts questions to SQL using semantic models across 6 domains: " +
-    "billing, GTM funnel, support cases, accounts, product, and finance.",
+    "Generates SQL from semantic models and executes it, returning both the query and results. " +
+    "Covers 6 domains: billing, GTM funnel, support cases, accounts, product, and finance.",
   {
     question: z.string().describe(
       "Natural language question about Owner.com data (e.g., 'What is our current ARR?')"
@@ -239,9 +389,13 @@ server.tool(
     semantic_model_file: z.string().optional().describe(
       "Override: stage path (@DB.SCHEMA.STAGE/model.yaml) or semantic view FQN (DB.SCHEMA.VIEW)"
     ),
+    execute: z.boolean().optional().describe(
+      "Execute the generated SQL and return results. Default: true. Set false to only get the SQL."
+    ),
   },
-  async ({ question, domain, semantic_model_file }) => {
+  async ({ question, domain, semantic_model_file, execute }) => {
     try {
+      const shouldExecute = execute !== false;
       const resolvedDomain = domain || routeDomain(question);
       const semanticModel = semantic_model_file || SEMANTIC_MODELS[resolvedDomain];
 
@@ -280,6 +434,7 @@ server.tool(
         if (data.message?.suggestions) suggestions = data.message.suggestions;
       }
 
+      // Build output
       const output = [
         `**Domain:** ${resolvedDomain}`,
         `**Semantic Model:** ${SEMANTIC_MODELS[resolvedDomain] || semanticModel}`,
@@ -294,6 +449,17 @@ server.tool(
       if (sqlQuery) {
         output.push("", "**Generated SQL:**", "", "```sql", sqlQuery, "```");
       }
+
+      // Execute the SQL and append results
+      if (sqlQuery && shouldExecute) {
+        try {
+          const results = await executeSQL(sqlQuery);
+          output.push("", "**Results:**", "", formatResults(results));
+        } catch (execErr) {
+          output.push("", `**Execution:** Could not run SQL — ${execErr.message}`);
+        }
+      }
+
       if (suggestions.length) {
         output.push("", "**Follow-up suggestions:**", ...suggestions.map((s) => `- ${s}`));
       }
