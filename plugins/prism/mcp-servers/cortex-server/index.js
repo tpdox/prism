@@ -269,11 +269,13 @@ async function executeSQL(sql) {
     throw new Error("SQL execution timed out or returned no data.");
   }
 
-  const columns = (result.resultSetMetaData?.rowType || []).map((col) => col.name);
+  const rowType = result.resultSetMetaData?.rowType || [];
+  const columns = rowType.map((col) => col.name);
+  const colTypes = rowType.map((col) => col.type);
   const rows = result.data || [];
   const totalRows = result.resultSetMetaData?.numRows ?? rows.length;
 
-  return { columns, rows, totalRows };
+  return { columns, colTypes, rows, totalRows };
 }
 
 /**
@@ -283,7 +285,7 @@ async function executeSQL(sql) {
  * - Small table: markdown table
  * - Wide/large: truncated markdown table with notes
  */
-function formatResults({ columns, rows, totalRows }) {
+function formatResults({ columns, colTypes, rows, totalRows }) {
   if (rows.length === 0) {
     return "*Query returned no results.*";
   }
@@ -293,7 +295,7 @@ function formatResults({ columns, rows, totalRows }) {
 
   // Scalar: 1 row, 1 column
   if (numRows === 1 && numCols === 1) {
-    return `**Result:** ${formatValue(rows[0][0])}`;
+    return `**Result:** ${formatValue(rows[0][0], colTypes[0])}`;
   }
 
   // Single row, multiple columns: key-value list
@@ -301,7 +303,7 @@ function formatResults({ columns, rows, totalRows }) {
     const lines = ["**Results (1 row):**"];
     const displayCols = Math.min(numCols, MAX_DISPLAY_COLS);
     for (let c = 0; c < displayCols; c++) {
-      lines.push(`- **${columns[c]}:** ${formatValue(rows[0][c])}`);
+      lines.push(`- **${columns[c]}:** ${formatValue(rows[0][c], colTypes[c])}`);
     }
     if (numCols > MAX_DISPLAY_COLS) {
       lines.push(`- *...and ${numCols - MAX_DISPLAY_COLS} more columns*`);
@@ -324,7 +326,7 @@ function formatResults({ columns, rows, totalRows }) {
   for (let r = 0; r < displayRows; r++) {
     const cells = [];
     for (let c = 0; c < displayCols; c++) {
-      cells.push(formatValue(rows[r][c]));
+      cells.push(formatValue(rows[r][c], colTypes[c]));
     }
     lines.push(`| ${cells.join(" | ")} |`);
   }
@@ -344,8 +346,27 @@ function formatResults({ columns, rows, totalRows }) {
   return lines.join("\n");
 }
 
-function formatValue(val) {
+/**
+ * Format a cell value, converting Snowflake type-specific representations.
+ * Snowflake SQL API returns DATE as epoch days (integer) and TIMESTAMP as epoch seconds (string).
+ */
+function formatValue(val, colType) {
   if (val === null || val === undefined) return "—";
+
+  const t = (colType || "").toLowerCase();
+
+  // DATE: integer = days since 1970-01-01
+  if (t === "date" && typeof val === "string" && /^\d+$/.test(val)) {
+    const d = new Date(parseInt(val, 10) * 86400000);
+    return d.toISOString().split("T")[0];
+  }
+
+  // TIMESTAMP variants: string = seconds (possibly fractional) since epoch
+  if (t.startsWith("timestamp") && typeof val === "string" && /^[\d.]+$/.test(val)) {
+    const d = new Date(parseFloat(val) * 1000);
+    return d.toISOString().replace("T", " ").replace(/\.000Z$/, "");
+  }
+
   if (typeof val === "string" && val.length > 100) return val.slice(0, 97) + "...";
   return String(val);
 }
